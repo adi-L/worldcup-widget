@@ -56,6 +56,28 @@ const I18N = {
 };
 const RTL_LANGS = ['he', 'ar'];
 
+// Shared across ALL widget instances on the page: identical API requests are
+// de-duplicated and reused for a short TTL. So N widgets for the same league
+// (and repeated polls) collapse to a single upstream call instead of N — which
+// keeps busy pages under TheSportsDB's free per-IP rate limit without a backend.
+const _fetchCache = new Map(); // url -> { at, promise }
+function sharedJson(url, ttlMs) {
+  const now = Date.now();
+  const hit = _fetchCache.get(url);
+  if (hit && now - hit.at < ttlMs) return hit.promise;
+  const promise = fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .catch((e) => {
+      _fetchCache.delete(url); // don't cache failures — allow a retry
+      throw e;
+    });
+  _fetchCache.set(url, { at: now, promise });
+  return promise;
+}
+
 // Known competition names, translated. The API returns league names in English;
 // if we have a translation for the exact name we use it, otherwise we show the
 // API name as-is (so pointing at another league still shows its real name).
@@ -129,11 +151,12 @@ export class WorldCupWidget extends LitElement {
   }
 
   async _load() {
+    const ttl = this.interval * 1000; // dedupe window == poll interval
     // Proxy mode: one cached URL that returns { featured, next }.
     if (this.endpoint) {
       try {
         const url = `${this.endpoint}${this.endpoint.includes('?') ? '&' : '?'}league=${this.league}`;
-        const data = await fetch(url).then((r) => r.json());
+        const data = await sharedJson(url, ttl);
         this._featured = data.featured || null;
         this._next = data.next || null;
         this._error = '';
@@ -148,8 +171,8 @@ export class WorldCupWidget extends LitElement {
     // Direct mode (free, no backend): call TheSportsDB and compute here.
     try {
       const [pastRes, nextRes] = await Promise.all([
-        fetch(`${API}/eventspastleague.php?id=${this.league}`).then((r) => r.json()),
-        fetch(`${API}/eventsnextleague.php?id=${this.league}`).then((r) => r.json()),
+        sharedJson(`${API}/eventspastleague.php?id=${this.league}`, ttl),
+        sharedJson(`${API}/eventsnextleague.php?id=${this.league}`, ttl),
       ]);
       const past = (pastRes.events || []).sort(
         (a, b) => this._ts(b) - this._ts(a)

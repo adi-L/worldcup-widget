@@ -11,6 +11,10 @@ with a live-ticking countdown to kick-off. **No build step, no API key.**
 
 **▶ Live demo: https://adi-l.github.io/worldcup-widget/**
 
+<p align="center">
+  <img src="./assets/widget-demo.png" alt="World Cup widget showing USA 2–0 Bosnia-Herzegovina (full time) and the next match Spain vs Austria with a live countdown" width="340">
+</p>
+
 Data comes from [TheSportsDB](https://www.thesportsdb.com) free tier
 (league `4429` = FIFA World Cup).
 
