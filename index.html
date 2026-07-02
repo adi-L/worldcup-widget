@@ -15,13 +15,26 @@
       }
       .wrap {
         text-align: center;
+        padding: 40px 20px 120px;
       }
       h1 {
         color: #f4f7fb;
         font-size: 18px;
         font-weight: 600;
-        margin-bottom: 24px;
-        opacity: 0.8;
+        margin-bottom: 6px;
+        opacity: 0.9;
+      }
+      p {
+        color: #8b98b0;
+        font-size: 13px;
+        margin: 0 0 32px;
+      }
+      h2 {
+        color: #8b98b0;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 40px 0 14px;
       }
     </style>
     <!-- The component (ES module, pulls Lit from a CDN) -->
@@ -30,7 +43,20 @@
   <body>
     <div class="wrap">
       <h1>⚽ Embeddable World Cup Widget</h1>
+      <p>One component, three ways to use it.</p>
+
+      <h2>Full card (default, embedded)</h2>
       <worldcup-widget league="4429" interval="60"></worldcup-widget>
+
+      <h2>Mini — click the pill to expand</h2>
+      <worldcup-widget variant="mini"></worldcup-widget>
+
+      <!-- Floating launcher pinned to the bottom-right of the page.
+           Click it to open the full card in place. -->
+      <worldcup-widget
+        variant="mini"
+        position="fixed"
+        corner="bottom-right"></worldcup-widget>
     </div>
   </body>
 </html>

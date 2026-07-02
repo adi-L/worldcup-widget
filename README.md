@@ -21,15 +21,43 @@ install or bundle.
 
 ### Attributes
 
-| Attribute  | Default | Description                                             |
-| ---------- | ------- | ------------------------------------------------------- |
-| `league`   | `4429`  | TheSportsDB league id (4429 = FIFA World Cup)           |
-| `interval` | `60`    | Refresh interval, in seconds                            |
-| `endpoint` | —       | Optional caching-proxy URL (see below). Recommended for public embeds. |
+| Attribute  | Default        | Description                                             |
+| ---------- | -------------- | ------------------------------------------------------- |
+| `league`   | `4429`         | TheSportsDB league id (4429 = FIFA World Cup)           |
+| `interval` | `60`           | Refresh interval, in seconds                            |
+| `endpoint` | —              | Optional caching-proxy URL (see below). Recommended for public embeds. |
+| `variant`  | `full`         | `full` = the card. `mini` = a small pill/button that expands to the full card on click. |
+| `position` | `embedded`     | `embedded` (inline), `fixed` (floats over the page), or `absolute`. |
+| `corner`   | `bottom-right` | Where it floats when `fixed`/`absolute`: `bottom-right`, `bottom-left`, `top-right`, `top-left`. |
 
 ```html
 <worldcup-widget league="4429" interval="30"></worldcup-widget>
 ```
+
+## Variants & positioning
+
+**Full card, inline** (default):
+
+```html
+<worldcup-widget></worldcup-widget>
+```
+
+**Mini pill that expands on click** (inline):
+
+```html
+<worldcup-widget variant="mini"></worldcup-widget>
+```
+
+**Floating launcher** — a small pill pinned to a page corner (like a chat
+bubble) that pops open the full card in place:
+
+```html
+<worldcup-widget variant="mini" position="fixed" corner="bottom-right"></worldcup-widget>
+```
+
+The mini pill shows the live score when a match is on, otherwise the live
+countdown to the next kick-off. Clicking it opens the full card with a close
+(×) button; clicking × collapses back to the pill.
 
 ## Two ways to run it
 

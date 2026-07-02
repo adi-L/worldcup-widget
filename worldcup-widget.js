@@ -14,6 +14,12 @@ import { LitElement, html, css } from 'https://esm.run/lit';
  *              URL instead of TheSportsDB directly — recommended for public /
  *              high-traffic embeds so a viral spike can't hit rate limits, and
  *              required if you use a paid API key (kept server-side).
+ *   variant  — 'full' (default, the card) or 'mini' (a small pill/button that
+ *              expands into the full card on click).
+ *   position — 'embedded' (default, inline), 'fixed' (floats over the page), or
+ *              'absolute' (positioned within the nearest positioned ancestor).
+ *   corner   — where it sits when floating: 'bottom-right' (default),
+ *              'bottom-left', 'top-right', 'top-left'.
  *
  * Note: TheSportsDB's free tier does not expose real-time in-play scores.
  * A match kicked-off-but-not-finished is shown as LIVE; its final score
@@ -27,6 +33,10 @@ export class WorldCupWidget extends LitElement {
     league: { type: String },
     interval: { type: Number },
     endpoint: { type: String },
+    variant: { type: String, reflect: true }, // 'full' | 'mini'
+    position: { type: String, reflect: true }, // 'embedded' | 'fixed' | 'absolute'
+    corner: { type: String, reflect: true }, // bottom-right | bottom-left | top-right | top-left
+    _open: { state: true },
     _featured: { state: true },
     _next: { state: true },
     _loading: { state: true },
@@ -39,6 +49,10 @@ export class WorldCupWidget extends LitElement {
     this.league = '4429';
     this.interval = 60;
     this.endpoint = '';
+    this.variant = 'full';
+    this.position = 'embedded';
+    this.corner = 'bottom-right';
+    this._open = false;
     this._fired = new Set(); // event ids we've already refreshed at kick-off
     this._featured = null;
     this._next = null;
@@ -178,12 +192,57 @@ export class WorldCupWidget extends LitElement {
     `;
   }
 
+  _closeBtn(show) {
+    return show
+      ? html`<button class="close" @click=${() => (this._open = false)}
+          aria-label="Close">×</button>`
+      : '';
+  }
+
   render() {
+    // Mini variant shows a small launcher button until the user opens it.
+    if (this.variant === 'mini' && !this._open) {
+      return this._renderLauncher();
+    }
+    return this._renderCard();
+  }
+
+  // Small pill button: live score if a match is on, else the next countdown.
+  _renderLauncher() {
+    const f = this._featured;
+    const n = this._next;
+    let label;
+    if (f && f.live) {
+      label = html`
+        <span class="m-pill live"><span class="dot"></span>LIVE</span>
+        <span class="m-score">${this._score(f.intHomeScore)}–${this._score(f.intAwayScore)}</span>
+      `;
+    } else if (n) {
+      const cd = this._countdown(n);
+      label = html`<span class="m-txt">Next ${cd || 'now'}</span>`;
+    } else if (f) {
+      label = html`<span class="m-score">${this._score(f.intHomeScore)}–${this._score(f.intAwayScore)}</span>`;
+    } else {
+      label = html`<span class="m-txt">World Cup</span>`;
+    }
+    return html`
+      <button class="launcher" @click=${() => (this._open = true)}
+        aria-label="Open World Cup scoreboard" title="World Cup scoreboard">
+        ${f?.strLeagueBadge
+          ? html`<img class="m-badge" src="${f.strLeagueBadge}" alt="" />`
+          : html`<span class="m-ball">⚽</span>`}
+        ${label}
+      </button>
+    `;
+  }
+
+  _renderCard() {
+    const closable = this.variant === 'mini';
     if (this._loading && !this._featured) {
-      return html`<div class="card"><div class="loading">Loading World Cup…</div></div>`;
+      return html`<div class="card">${this._closeBtn(closable)}<div class="loading">Loading World Cup…</div></div>`;
     }
     if (this._error && !this._featured) {
-      return html`<div class="card"><div class="loading">${this._error}</div></div>`;
+      return html`<div class="card">${this._closeBtn(closable)}<div class="loading">${this._error}</div></div>`;
     }
 
     const f = this._featured;
@@ -192,7 +251,8 @@ export class WorldCupWidget extends LitElement {
     const starting = n && cd === null; // kick-off reached, awaiting refresh
 
     return html`
-      <div class="card">
+      <div class="card open">
+        ${this._closeBtn(closable)}
         <header>
           ${f?.strLeagueBadge
             ? html`<img class="league-badge" src="${f.strLeagueBadge}" alt="" />`
@@ -259,7 +319,124 @@ export class WorldCupWidget extends LitElement {
       width: 320px;
       max-width: 100%;
     }
+    /* --- Positioning modes --- */
+    :host([position='fixed']) {
+      position: fixed;
+      z-index: 2147483000;
+      width: auto;
+    }
+    :host([position='absolute']) {
+      position: absolute;
+      z-index: 100;
+      width: auto;
+    }
+    :host([position='fixed'][corner='bottom-right']),
+    :host([position='absolute'][corner='bottom-right']) {
+      bottom: 20px;
+      right: 20px;
+    }
+    :host([position='fixed'][corner='bottom-left']),
+    :host([position='absolute'][corner='bottom-left']) {
+      bottom: 20px;
+      left: 20px;
+    }
+    :host([position='fixed'][corner='top-right']),
+    :host([position='absolute'][corner='top-right']) {
+      top: 20px;
+      right: 20px;
+    }
+    :host([position='fixed'][corner='top-left']),
+    :host([position='absolute'][corner='top-left']) {
+      top: 20px;
+      left: 20px;
+    }
+    /* When floating, the open card keeps its natural width and sits at the corner */
+    :host([position='fixed']) .card,
+    :host([position='absolute']) .card {
+      width: 320px;
+      max-width: calc(100vw - 40px);
+    }
+    /* --- Mini launcher button --- */
+    .launcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px 8px 10px;
+      border: 1px solid var(--wc-line);
+      border-radius: 999px;
+      background: linear-gradient(160deg, var(--wc-bg2), var(--wc-bg));
+      color: var(--wc-fg);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .launcher:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    }
+    .launcher:focus-visible {
+      outline: 2px solid var(--wc-accent);
+      outline-offset: 2px;
+    }
+    .m-badge {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
+    .m-ball {
+      font-size: 16px;
+    }
+    .m-score {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .m-txt {
+      color: var(--wc-fg);
+    }
+    .m-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(0, 209, 122, 0.15);
+      color: var(--wc-accent);
+    }
+    /* --- Close button (mini, when opened) --- */
+    .close {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      z-index: 2;
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--wc-fg);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .close:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+    .card.open {
+      animation: pop 0.18s ease-out;
+    }
+    @keyframes pop {
+      from { opacity: 0; transform: scale(0.94) translateY(6px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
     .card {
+      position: relative;
       background: linear-gradient(160deg, var(--wc-bg2), var(--wc-bg));
       border: 1px solid var(--wc-line);
       border-radius: 16px;
@@ -446,7 +623,7 @@ export class WorldCupWidget extends LitElement {
       50% { background: rgba(0, 209, 122, 0.16); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .ball, .next.starting, .dot { animation: none; }
+      .ball, .next.starting, .dot, .card.open, .launcher { animation: none; transition: none; }
     }
   `;
 }
