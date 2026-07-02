@@ -1,0 +1,46 @@
+{
+  "name": "worldcup-widget",
+  "version": "1.0.0",
+  "description": "Embeddable Lit web component showing the current FIFA World Cup match score and the next fixture. No build step, no API key, i18n (en/fr/he/ar) with RTL.",
+  "type": "module",
+  "main": "worldcup-widget.js",
+  "module": "worldcup-widget.js",
+  "exports": {
+    ".": "./worldcup-widget.js"
+  },
+  "files": [
+    "worldcup-widget.js",
+    "worker/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "npx serve .",
+    "check": "node --check worldcup-widget.js && node --check worker/worldcup-proxy.js"
+  },
+  "keywords": [
+    "lit",
+    "web-component",
+    "custom-element",
+    "worldcup",
+    "world-cup",
+    "football",
+    "soccer",
+    "scoreboard",
+    "widget",
+    "embeddable",
+    "thesportsdb",
+    "i18n",
+    "rtl"
+  ],
+  "homepage": "https://adi-l.github.io/worldcup-widget/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adi-L/worldcup-widget.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adi-L/worldcup-widget/issues"
+  },
+  "author": "Adi Levi",
+  "license": "MIT"
+}

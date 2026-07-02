@@ -1,23 +1,43 @@
 # ⚽ World Cup Widget
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![Built with Lit](https://img.shields.io/badge/built%20with-Lit-324FFF.svg)](https://lit.dev)
+[![No build step](https://img.shields.io/badge/build-none-brightgreen.svg)](#embed-it-anywhere)
+[![Live demo](https://img.shields.io/badge/demo-live-blue.svg)](https://adi-l.github.io/worldcup-widget/)
+
 A small, embeddable [Lit](https://lit.dev) web component that shows the current
-(or most recent) FIFA World Cup match with its score, plus the next fixture.
-No build step, no API key.
+(or most recent) FIFA World Cup match with its score, plus the next fixture —
+with a live-ticking countdown to kick-off. **No build step, no API key.**
+
+**▶ Live demo: https://adi-l.github.io/worldcup-widget/**
 
 Data comes from [TheSportsDB](https://www.thesportsdb.com) free tier
 (league `4429` = FIFA World Cup).
 
+## Features
+
+- 🟢 **Current / latest match** with score, plus the **next fixture**
+- ⏱️ **Live countdown** that ticks to the second and celebrates at kick-off
+- 🌍 **Timezone-aware** — kick-off shown in each visitor's local time
+- 🗣️ **4 languages** — English, French, Hebrew, Arabic (with full **RTL**)
+- 🎛️ **3 layouts** — full card, mini pill, or a floating corner launcher
+- 🎨 **Themeable** via CSS custom properties
+- 📦 **Zero dependencies to install** — one `<script>` tag and you're done
+- 🛡️ Optional caching proxy for high-traffic / paid live-score use
+
 ## Embed it anywhere
 
-Drop two lines onto any page:
+Drop two lines onto any page — no install, no build. Load it straight from the
+[jsDelivr](https://www.jsdelivr.com) CDN:
 
 ```html
-<script type="module" src="https://your-host.com/worldcup-widget.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/adi-L/worldcup-widget@main/worldcup-widget.js"></script>
 <worldcup-widget></worldcup-widget>
 ```
 
 That's it. Lit is loaded from a CDN inside the component, so there's nothing to
-install or bundle.
+install or bundle. (Prefer to self-host? Just serve `worldcup-widget.js` from
+your own domain and point the `src` at it.)
 
 ### Attributes
 
@@ -120,5 +140,26 @@ npx serve .
 TheSportsDB's **free** tier does not expose real-time in-play scores. A match
 that has kicked off but isn't finished is shown as **LIVE**; its final score
 appears once the match reaches full-time. For true minute-by-minute scores,
-upgrade to their premium livescore endpoint (v2) and swap the fetch in
-`worldcup-widget.js`.
+upgrade to their premium livescore endpoint (v2) — set the key as a secret on
+the proxy (see [`worker/`](./worker/)); it's never exposed to the browser.
+
+## Contributing
+
+Contributions are welcome! This is a tiny, dependency-free project, so it's easy
+to hack on:
+
+1. Fork and clone the repo.
+2. `npm start` (runs a static server) and open the demo.
+3. Make your change in `worldcup-widget.js` (or `worker/` for the proxy).
+4. `npm run check` to lint-syntax both files.
+5. Open a pull request describing what and why.
+
+Ideas that would make great PRs: more languages, additional competitions in the
+league-name map, an optional goal-flash animation, or a `lang="auto"` mode that
+follows the visitor's browser language. Please keep it dependency-free.
+
+Found a bug or have a request? [Open an issue](https://github.com/adi-L/worldcup-widget/issues).
+
+## License
+
+[MIT](./LICENSE) © Adi Levi — free to use, modify, and embed anywhere.
