@@ -22,9 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Assemble static site (demo files only)
+        run: |
+          mkdir -p _site/assets
+          cp index.html worldcup-widget.js _site/
+          cp assets/*.png _site/assets/ 2>/dev/null || true
+          touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
       - id: deployment
         uses: actions/deploy-pages@v4
