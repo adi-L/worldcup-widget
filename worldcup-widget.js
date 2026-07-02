@@ -20,6 +20,9 @@ import { LitElement, html, css } from 'https://esm.run/lit';
  *              'absolute' (positioned within the nearest positioned ancestor).
  *   corner   — where it sits when floating: 'bottom-right' (default),
  *              'bottom-left', 'top-right', 'top-left'.
+ *   lang     — UI language: 'en' (default), 'fr', 'he', 'ar'. Hebrew and
+ *              Arabic render right-to-left. Team/league names come from the
+ *              API and stay as-is; dates localize to the chosen language.
  *
  * Note: TheSportsDB's free tier does not expose real-time in-play scores.
  * A match kicked-off-but-not-finished is shown as LIVE; its final score
@@ -27,6 +30,31 @@ import { LitElement, html, css } from 'https://esm.run/lit';
  */
 const API = 'https://www.thesportsdb.com/api/v1/json/3';
 const LIVE_WINDOW_MIN = 150; // treat a kicked-off match as live for ~2.5h
+
+// UI strings + compact countdown units per language. RTL langs: he, ar.
+const I18N = {
+  en: { live: 'LIVE', ft: 'FULL TIME', upNext: 'Up Next', next: 'Next',
+        kickoff: 'Kick-off — starting now!', goingLive: 'Going live any moment…',
+        worldCup: 'World Cup', loading: 'Loading World Cup…',
+        error: 'Could not load match data.', noMatch: 'No recent match.', vs: 'vs',
+        in: 'in', now: 'now', d: 'd', h: 'h', m: 'm', s: 's' },
+  fr: { live: 'EN DIRECT', ft: 'TERMINÉ', upNext: 'À suivre', next: 'Prochain',
+        kickoff: 'Coup d’envoi — ça commence !', goingLive: 'En direct dans un instant…',
+        worldCup: 'Coupe du Monde', loading: 'Chargement…',
+        error: 'Impossible de charger les données.', noMatch: 'Aucun match récent.', vs: 'contre',
+        in: 'dans', now: 'maintenant', d: 'j', h: 'h', m: 'min', s: 's' },
+  he: { live: 'שידור חי', ft: 'הסתיים', upNext: 'המשחק הבא', next: 'הבא',
+        kickoff: 'שריקת פתיחה — מתחילים!', goingLive: 'עולים לשידור עוד רגע…',
+        worldCup: 'גביע העולם', loading: 'טוען…',
+        error: 'לא ניתן לטעון את הנתונים.', noMatch: 'אין משחק אחרון.', vs: 'נגד',
+        in: 'בעוד', now: 'עכשיו', d: 'י׳', h: 'שע׳', m: 'דק׳', s: 'שנ׳' },
+  ar: { live: 'مباشر', ft: 'انتهت', upNext: 'المباراة القادمة', next: 'التالية',
+        kickoff: 'صافرة البداية — تبدأ الآن!', goingLive: 'ستُبث مباشرة خلال لحظات…',
+        worldCup: 'كأس العالم', loading: 'جارٍ التحميل…',
+        error: 'تعذّر تحميل البيانات.', noMatch: 'لا توجد مباراة حديثة.', vs: 'ضد',
+        in: 'خلال', now: 'الآن', d: 'ي', h: 'س', m: 'د', s: 'ث' },
+};
+const RTL_LANGS = ['he', 'ar'];
 
 export class WorldCupWidget extends LitElement {
   static properties = {
@@ -36,6 +64,7 @@ export class WorldCupWidget extends LitElement {
     variant: { type: String, reflect: true }, // 'full' | 'mini'
     position: { type: String, reflect: true }, // 'embedded' | 'fixed' | 'absolute'
     corner: { type: String, reflect: true }, // bottom-right | bottom-left | top-right | top-left
+    lang: { type: String, reflect: true }, // 'en' | 'fr' | 'he' | 'ar'
     _open: { state: true },
     _featured: { state: true },
     _next: { state: true },
@@ -52,6 +81,7 @@ export class WorldCupWidget extends LitElement {
     this.variant = 'full';
     this.position = 'embedded';
     this.corner = 'bottom-right';
+    this.lang = 'en';
     this._open = false;
     this._fired = new Set(); // event ids we've already refreshed at kick-off
     this._featured = null;
@@ -159,27 +189,37 @@ export class WorldCupWidget extends LitElement {
     return v === null || v === undefined || v === '' ? '–' : v;
   }
 
+  _t() {
+    return I18N[this.lang] || I18N.en;
+  }
+  _rtl() {
+    return RTL_LANGS.includes(this.lang);
+  }
+
   // Returns a live countdown string, or null once kick-off is reached.
-  // Shows seconds when under an hour so it visibly ticks down.
+  // Shows seconds when under an hour so it visibly ticks down. Localized.
   _countdown(e) {
     const diff = this._ts(e) - this._now;
     if (diff <= 0) return null;
+    const t = this._t();
     const d = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
     const pad = (v) => String(v).padStart(2, '0');
-    if (d > 0) return `in ${d}d ${h}h ${pad(m)}m`;
-    if (h > 0) return `in ${h}h ${pad(m)}m ${pad(s)}s`;
-    if (m > 0) return `in ${m}m ${pad(s)}s`;
-    return `in ${s}s`;
+    let body;
+    if (d > 0) body = `${d}${t.d} ${h}${t.h} ${pad(m)}${t.m}`;
+    else if (h > 0) body = `${h}${t.h} ${pad(m)}${t.m} ${pad(s)}${t.s}`;
+    else if (m > 0) body = `${m}${t.m} ${pad(s)}${t.s}`;
+    else body = `${s}${t.s}`;
+    return `${t.in} ${body}`;
   }
 
   // Renders in the viewer's own timezone automatically (undefined locale =
   // browser locale), with the tz abbreviation so it's clearly *their* local time.
   _kickoff(e) {
     const dt = new Date(this._ts(e));
-    return dt.toLocaleString(undefined, {
+    return dt.toLocaleString(this.lang || undefined, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -219,23 +259,25 @@ export class WorldCupWidget extends LitElement {
   _renderLauncher() {
     const f = this._featured;
     const n = this._next;
+    const t = this._t();
     let label;
     if (f && f.live) {
       label = html`
-        <span class="m-pill live"><span class="dot"></span>LIVE</span>
+        <span class="m-pill live"><span class="dot"></span>${t.live}</span>
         <span class="m-score">${this._score(f.intHomeScore)}–${this._score(f.intAwayScore)}</span>
       `;
     } else if (n) {
       const cd = this._countdown(n);
-      label = html`<span class="m-txt">Next ${cd || 'now'}</span>`;
+      label = html`<span class="m-txt">${t.next} ${cd || t.now}</span>`;
     } else if (f) {
       label = html`<span class="m-score">${this._score(f.intHomeScore)}–${this._score(f.intAwayScore)}</span>`;
     } else {
-      label = html`<span class="m-txt">World Cup</span>`;
+      label = html`<span class="m-txt">${t.worldCup}</span>`;
     }
     return html`
-      <button class="launcher" @click=${() => (this._open = true)}
-        aria-label="Open World Cup scoreboard" title="World Cup scoreboard">
+      <button class="launcher" dir=${this._rtl() ? 'rtl' : 'ltr'}
+        @click=${() => (this._open = true)}
+        aria-label="${t.worldCup}" title="${t.worldCup}">
         ${f?.strLeagueBadge
           ? html`<img class="m-badge" src="${f.strLeagueBadge}" alt="" />`
           : html`<span class="m-ball">⚽</span>`}
@@ -246,11 +288,14 @@ export class WorldCupWidget extends LitElement {
 
   _renderCard() {
     const closable = this.variant === 'mini';
+    const t = this._t();
+    const dir = this._rtl() ? 'rtl' : 'ltr';
+    const cls = `card open${this._rtl() ? ' rtl' : ''}`;
     if (this._loading && !this._featured) {
-      return html`<div class="card">${this._closeBtn(closable)}<div class="loading">Loading World Cup…</div></div>`;
+      return html`<div class="${cls}" dir=${dir}>${this._closeBtn(closable)}<div class="loading">${t.loading}</div></div>`;
     }
     if (this._error && !this._featured) {
-      return html`<div class="card">${this._closeBtn(closable)}<div class="loading">${this._error}</div></div>`;
+      return html`<div class="${cls}" dir=${dir}>${this._closeBtn(closable)}<div class="loading">${t.error}</div></div>`;
     }
 
     const f = this._featured;
@@ -259,13 +304,13 @@ export class WorldCupWidget extends LitElement {
     const starting = n && cd === null; // kick-off reached, awaiting refresh
 
     return html`
-      <div class="card open">
+      <div class="${cls}" dir=${dir}>
         ${this._closeBtn(closable)}
         <header>
           ${f?.strLeagueBadge
             ? html`<img class="league-badge" src="${f.strLeagueBadge}" alt="" />`
             : ''}
-          <div class="league-name">${f?.strLeague || 'FIFA World Cup'}</div>
+          <div class="league-name">${f?.strLeague || t.worldCup}</div>
         </header>
 
         ${f
@@ -273,8 +318,8 @@ export class WorldCupWidget extends LitElement {
               <section class="featured">
                 <div class="status">
                   ${f.live
-                    ? html`<span class="pill live"><span class="dot"></span>LIVE</span>`
-                    : html`<span class="pill">FULL TIME</span>`}
+                    ? html`<span class="pill live"><span class="dot"></span>${t.live}</span>`
+                    : html`<span class="pill">${t.ft}</span>`}
                 </div>
                 <div class="matchup">
                   ${this._team(f.strHomeTeam, f.strHomeTeamBadge)}
@@ -288,23 +333,23 @@ export class WorldCupWidget extends LitElement {
                 ${f.strVenue ? html`<div class="venue">${f.strVenue}</div>` : ''}
               </section>
             `
-          : html`<section class="featured"><div class="venue">No recent match.</div></section>`}
+          : html`<section class="featured"><div class="venue">${t.noMatch}</div></section>`}
 
         ${n
           ? html`
               <section class="next ${starting ? 'starting' : ''}">
                 <div class="next-label">
                   ${starting
-                    ? html`<span class="kick"><span class="ball">⚽</span> Kick-off — starting now!</span>`
-                    : html`Up Next · <span class="cd">${cd}</span>`}
+                    ? html`<span class="kick"><span class="ball">⚽</span> ${t.kickoff}</span>`
+                    : html`${t.upNext} · <span class="cd">${cd}</span>`}
                 </div>
                 <div class="next-row">
                   ${this._team(n.strHomeTeam, n.strHomeTeamBadge)}
-                  <span class="vs">vs</span>
+                  <span class="vs">${t.vs}</span>
                   ${this._team(n.strAwayTeam, n.strAwayTeamBadge)}
                 </div>
                 <div class="next-time">
-                  ${starting ? 'Going live any moment…' : this._kickoff(n)}
+                  ${starting ? t.goingLive : this._kickoff(n)}
                 </div>
               </section>
             `
@@ -435,6 +480,11 @@ export class WorldCupWidget extends LitElement {
     }
     .close:hover {
       background: rgba(255, 255, 255, 0.18);
+    }
+    /* In RTL the close button moves to the top-left corner. */
+    .card.rtl .close {
+      right: auto;
+      left: 10px;
     }
     .card.open {
       animation: pop 0.18s ease-out;

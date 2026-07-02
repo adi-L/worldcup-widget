@@ -29,6 +29,7 @@ install or bundle.
 | `variant`  | `full`         | `full` = the card. `mini` = a small pill/button that expands to the full card on click. |
 | `position` | `embedded`     | `embedded` (inline), `fixed` (floats over the page), or `absolute`. |
 | `corner`   | `bottom-right` | Where it floats when `fixed`/`absolute`: `bottom-right`, `bottom-left`, `top-right`, `top-left`. |
+| `lang`     | `en`           | UI language: `en`, `fr`, `he`, `ar`. `he`/`ar` render right-to-left; dates localize automatically. |
 
 ```html
 <worldcup-widget league="4429" interval="30"></worldcup-widget>
@@ -58,6 +59,21 @@ bubble) that pops open the full card in place:
 The mini pill shows the live score when a match is on, otherwise the live
 countdown to the next kick-off. Clicking it opens the full card with a close
 (×) button; clicking × collapses back to the pill.
+
+## Languages
+
+```html
+<worldcup-widget lang="en"></worldcup-widget>
+<worldcup-widget lang="fr"></worldcup-widget>
+<worldcup-widget lang="he"></worldcup-widget>  <!-- right-to-left -->
+<worldcup-widget lang="ar"></worldcup-widget>  <!-- right-to-left -->
+```
+
+All of the widget's own text — LIVE / FULL TIME, Up Next, the countdown, the
+kick-off state — is translated, and **dates render in the chosen language and
+the viewer's timezone**. Hebrew and Arabic switch the whole card to RTL
+(including the close button). Team and league names come from the API as proper
+nouns and are shown as-is.
 
 ## Two ways to run it
 
