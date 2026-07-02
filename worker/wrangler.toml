@@ -1,0 +1,12 @@
+name = "worldcup-proxy"
+main = "worldcup-proxy.js"
+compatibility_date = "2024-11-01"
+
+# Free tier: no API key needed — the proxy just caches the free endpoint.
+#
+# To enable REAL live scores later (paid TheSportsDB plan), set the key as a
+# SECRET so it never lives in this file or in git:
+#
+#   npx wrangler secret put THESPORTSDB_KEY
+#
+# (You'll be prompted to paste the key; it's stored encrypted on Cloudflare.)
