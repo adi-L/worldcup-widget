@@ -146,8 +146,13 @@ export class WorldCupWidget extends LitElement {
     }
   }
 
+  // TheSportsDB timestamps are UTC but omit the timezone marker, so JS would
+  // otherwise parse them as the viewer's local time. Tag as UTC → one true
+  // kick-off instant that renders correctly in every visitor's own timezone.
   _ts(e) {
-    return new Date(e.strTimestamp || `${e.dateEvent}T${e.strTime || '00:00:00'}`).getTime();
+    let s = e.strTimestamp || `${e.dateEvent}T${e.strTime || '00:00:00'}`;
+    if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) s += 'Z';
+    return new Date(s).getTime();
   }
 
   _score(v) {
@@ -170,6 +175,8 @@ export class WorldCupWidget extends LitElement {
     return `in ${s}s`;
   }
 
+  // Renders in the viewer's own timezone automatically (undefined locale =
+  // browser locale), with the tz abbreviation so it's clearly *their* local time.
   _kickoff(e) {
     const dt = new Date(this._ts(e));
     return dt.toLocaleString(undefined, {
@@ -178,6 +185,7 @@ export class WorldCupWidget extends LitElement {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZoneName: 'short',
     });
   }
 

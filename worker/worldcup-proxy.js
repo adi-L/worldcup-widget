@@ -141,10 +141,12 @@ function slim(e) {
   };
 }
 
+// TheSportsDB timestamps are UTC but omit the marker; tag as UTC so the
+// live-window math is correct regardless of where this Worker runs.
 function ts(e) {
-  return new Date(
-    e.strTimestamp || `${e.dateEvent}T${e.strTime || '00:00:00'}`
-  ).getTime();
+  let s = e.strTimestamp || `${e.dateEvent}T${e.strTime || '00:00:00'}`;
+  if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) s += 'Z';
+  return new Date(s).getTime();
 }
 
 async function fetchJson(u) {
