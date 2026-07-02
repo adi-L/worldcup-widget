@@ -39,6 +39,7 @@ export class WorldCupWidget extends LitElement {
     this.league = '4429';
     this.interval = 60;
     this.endpoint = '';
+    this._fired = new Set(); // event ids we've already refreshed at kick-off
     this._featured = null;
     this._next = null;
     this._loading = true;
@@ -50,7 +51,20 @@ export class WorldCupWidget extends LitElement {
     super.connectedCallback();
     this._load();
     this._poll = setInterval(() => this._load(), this.interval * 1000);
-    this._tick = setInterval(() => (this._now = Date.now()), 1000);
+    this._tick = setInterval(() => {
+      this._now = Date.now();
+      this._checkKickoff();
+    }, 1000);
+  }
+
+  // When the next match reaches kick-off, refresh once so it can move into the
+  // live/featured slot. Guarded so it fires a single time per match.
+  _checkKickoff() {
+    const n = this._next;
+    if (n && !this._fired.has(n.idEvent) && this._ts(n) - this._now <= 0) {
+      this._fired.add(n.idEvent);
+      this._load();
+    }
   }
 
   disconnectedCallback() {
@@ -126,15 +140,20 @@ export class WorldCupWidget extends LitElement {
     return v === null || v === undefined || v === '' ? '–' : v;
   }
 
+  // Returns a live countdown string, or null once kick-off is reached.
+  // Shows seconds when under an hour so it visibly ticks down.
   _countdown(e) {
     const diff = this._ts(e) - this._now;
-    if (diff <= 0) return 'Kicking off';
+    if (diff <= 0) return null;
     const d = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
-    if (d > 0) return `in ${d}d ${h}h`;
-    if (h > 0) return `in ${h}h ${m}m`;
-    return `in ${m}m`;
+    const s = Math.floor((diff % 60000) / 1000);
+    const pad = (v) => String(v).padStart(2, '0');
+    if (d > 0) return `in ${d}d ${h}h ${pad(m)}m`;
+    if (h > 0) return `in ${h}h ${pad(m)}m ${pad(s)}s`;
+    if (m > 0) return `in ${m}m ${pad(s)}s`;
+    return `in ${s}s`;
   }
 
   _kickoff(e) {
@@ -169,6 +188,8 @@ export class WorldCupWidget extends LitElement {
 
     const f = this._featured;
     const n = this._next;
+    const cd = n ? this._countdown(n) : null;
+    const starting = n && cd === null; // kick-off reached, awaiting refresh
 
     return html`
       <div class="card">
@@ -203,14 +224,20 @@ export class WorldCupWidget extends LitElement {
 
         ${n
           ? html`
-              <section class="next">
-                <div class="next-label">Up Next · ${this._countdown(n)}</div>
+              <section class="next ${starting ? 'starting' : ''}">
+                <div class="next-label">
+                  ${starting
+                    ? html`<span class="kick"><span class="ball">⚽</span> Kick-off — starting now!</span>`
+                    : html`Up Next · <span class="cd">${cd}</span>`}
+                </div>
                 <div class="next-row">
                   ${this._team(n.strHomeTeam, n.strHomeTeamBadge)}
                   <span class="vs">vs</span>
                   ${this._team(n.strAwayTeam, n.strAwayTeamBadge)}
                 </div>
-                <div class="next-time">${this._kickoff(n)}</div>
+                <div class="next-time">
+                  ${starting ? 'Going live any moment…' : this._kickoff(n)}
+                </div>
               </section>
             `
           : ''}
@@ -390,6 +417,36 @@ export class WorldCupWidget extends LitElement {
       text-align: center;
       font-size: 11px;
       color: var(--wc-muted);
+    }
+    /* Tabular digits keep the ticking countdown from jittering side to side. */
+    .cd {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Kick-off celebration */
+    .next.starting {
+      background: rgba(0, 209, 122, 0.1);
+      animation: flash 1.4s ease-in-out infinite;
+    }
+    .kick {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--wc-accent);
+    }
+    .ball {
+      display: inline-block;
+      animation: bounce 0.7s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-4px) rotate(20deg); }
+    }
+    @keyframes flash {
+      0%, 100% { background: rgba(0, 209, 122, 0.06); }
+      50% { background: rgba(0, 209, 122, 0.16); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ball, .next.starting, .dot { animation: none; }
     }
   `;
 }
