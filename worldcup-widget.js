@@ -56,6 +56,17 @@ const I18N = {
 };
 const RTL_LANGS = ['he', 'ar'];
 
+// Known competition names, translated. The API returns league names in English;
+// if we have a translation for the exact name we use it, otherwise we show the
+// API name as-is (so pointing at another league still shows its real name).
+const LEAGUE_I18N = {
+  'FIFA World Cup': {
+    fr: 'Coupe du Monde FIFA',
+    he: 'גביע העולם בכדורגל',
+    ar: 'كأس العالم لكرة القدم',
+  },
+};
+
 export class WorldCupWidget extends LitElement {
   static properties = {
     league: { type: String },
@@ -195,6 +206,12 @@ export class WorldCupWidget extends LitElement {
   _rtl() {
     return RTL_LANGS.includes(this.lang);
   }
+  // Translate a known league name for the current language, else show it as-is.
+  _leagueName(name) {
+    if (!name) return this._t().worldCup;
+    const tr = LEAGUE_I18N[name];
+    return (tr && tr[this.lang]) || name;
+  }
 
   // Returns a live countdown string, or null once kick-off is reached.
   // Shows seconds when under an hour so it visibly ticks down. Localized.
@@ -310,7 +327,7 @@ export class WorldCupWidget extends LitElement {
           ${f?.strLeagueBadge
             ? html`<img class="league-badge" src="${f.strLeagueBadge}" alt="" />`
             : ''}
-          <div class="league-name">${f?.strLeague || t.worldCup}</div>
+          <div class="league-name">${this._leagueName(f?.strLeague)}</div>
         </header>
 
         ${f
